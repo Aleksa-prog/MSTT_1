@@ -15,27 +15,27 @@ import java.util.Arrays;
 import java.util.Vector;
 
 public class BookBuyerAgent extends Agent {
-    // The title of the book to buy
+    // Назва книги для покупки
     private String targetBookTitle;
-    // The list of known seller agents
+    // Список агентів-продавців, у яких є книга
     private AID[] sellerAgents;
 
-    // Put agent initializations here
+    // Ініціалізація агента
     protected void setup() {
-        // Printout a welcome message
+        // Принт повідомлення про початок роботи агента-покупця
         System.out.println("Hallo! Buyer-agent "+getAID().getName()+" is ready.");
 
-        // Get the title of the book to buy as a start-up argument
+        // Начальним аргументом роботи агнента-покупця є книга для покупки
         Object[] args = {"1984"};
         if (args != null && args.length > 0) {
             targetBookTitle = (String) args[0];
             System.out.println("Target book is "+targetBookTitle);
 
-            // Add a TickerBehaviour that schedules a request to seller agents every minute
+            // Додавання поведінки типу TickerBehaviour, яка подає пропозицію на пошук книги агентам-продавцям кожну хвилину
             addBehaviour(new TickerBehaviour(this, 10000) {
                 protected void onTick() {
                     System.out.println("Trying to buy "+targetBookTitle);
-                    // Update the list of seller agents
+                    // Оновити список агентів-продавців, у яких є книга
                     DFAgentDescription template = new DFAgentDescription();
                     ServiceDescription sd = new ServiceDescription();
                     sd.setType("book-selling");
@@ -52,12 +52,12 @@ public class BookBuyerAgent extends Agent {
                         fe.printStackTrace();
                     }
 
-                    // Perform the request
+                    // Відправити повідомлення про пошук
                     myAgent.addBehaviour(new RequestPerformer());
                 }
             } );
         } else {
-            // Make the agent terminate
+            // Заставити агента термінуватися
             System.out.println("No target book title specified");
             doDelete();
         }
@@ -65,26 +65,25 @@ public class BookBuyerAgent extends Agent {
 
     // Put agent clean-up operations here
     protected void takeDown() {
-        // Printout a dismissal message
+        // Повідомлення про термінування агента-покупця
         System.out.println("Buyer-agent "+getAID().getName()+" terminating.");
     }
 
     /**
      Inner class RequestPerformer.
-     This is the behaviour used by Book-buyer agents to request seller
-     agents the target book.
+     Поведінка для агентів-покупців для запросу у агентів-продавців книги пошуку
      */
     private class RequestPerformer extends Behaviour {
-        private AID bestSeller; // The agent who provides the best offer
-        private int bestPrice;  // The best offered price
-        private int repliesCnt = 0; // The counter of replies from seller agents
-        private MessageTemplate mt; // The template to receive replies
+        private AID bestSeller; // агент з найкращою пропозицією
+        private int bestPrice;  // найкраща ціна
+        private int repliesCnt = 0; // лічильник відповідей від агентів-продавців
+        private MessageTemplate mt; // зразок отримання відповідей
         private int step = 0;
 
         public void action() {
             switch (step) {
                 case 0:
-                    // Send the cfp to all sellers
+                    // Послати cfp до всіх агентів-продавців
                     ACLMessage cfp = new ACLMessage(ACLMessage.CFP);
                     for (int i = 0; i < sellerAgents.length; ++i) {
                         cfp.addReceiver(sellerAgents[i]);
@@ -93,28 +92,28 @@ public class BookBuyerAgent extends Agent {
                     cfp.setConversationId("book-trade");
                     cfp.setReplyWith("cfp"+System.currentTimeMillis()); // Unique value
                     myAgent.send(cfp);
-                    // Prepare the template to get proposals
+                    // Підговувати зразок для отримання пропозицій
                     mt = MessageTemplate.and(MessageTemplate.MatchConversationId("book-trade"),
                             MessageTemplate.MatchInReplyTo(cfp.getReplyWith()));
                     step = 1;
                     break;
                 case 1:
-                    // Receive all proposals/refusals from seller agents
+                    // Отримати всі пропозиції/відкази від агентів-продавців
                     ACLMessage reply = myAgent.receive(mt);
                     if (reply != null) {
-                        // Reply received
+                        // Отримання відповіді
                         if (reply.getPerformative() == ACLMessage.PROPOSE) {
-                            // This is an offer
+                            // Вибір пропозиції
                             int price = Integer.parseInt(reply.getContent());
                             if (bestSeller == null || price < bestPrice) {
-                                // This is the best offer at present
+                                // Вибір найкращої на даний час пропозиції
                                 bestPrice = price;
                                 bestSeller = reply.getSender();
                             }
                         }
                         repliesCnt++;
                         if (repliesCnt >= sellerAgents.length) {
-                            // We received all replies
+                            // Отримали всі відповіді
                             step = 2;
                         }
                     } else {
@@ -122,25 +121,25 @@ public class BookBuyerAgent extends Agent {
                     }
                     break;
                 case 2:
-                    // Send the purchase order to the seller that provided the best offer
+                    // Відправити ордер на купівлю у агента-продавця з найкращою пропозицією
                     ACLMessage order = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
                     order.addReceiver(bestSeller);
                     order.setContent(targetBookTitle);
                     order.setConversationId("book-trade");
                     order.setReplyWith("order"+System.currentTimeMillis());
                     myAgent.send(order);
-                    // Prepare the template to get the purchase order reply
+                    // Підготувати зразок для отримання відповіді на ордер купівлі
                     mt = MessageTemplate.and(MessageTemplate.MatchConversationId("book-trade"),
                             MessageTemplate.MatchInReplyTo(order.getReplyWith()));
                     step = 3;
                     break;
                 case 3:
-                    // Receive the purchase order reply
+                    // Отримати відповідь на купівлю книги
                     reply = myAgent.receive(mt);
                     if (reply != null) {
                         // Purchase order reply received
                         if (reply.getPerformative() == ACLMessage.INFORM) {
-                            // Purchase successful. We can terminate
+                            // Купівля прошла успішно, агент термінується
                             System.out.println(targetBookTitle+" successfully purchased from agent "+reply.getSender().getName());
                             System.out.println("Price = "+bestPrice);
                             myAgent.doDelete();
