@@ -13,17 +13,17 @@ import jade.lang.acl.MessageTemplate;
 import java.util.Hashtable;
 
 public class BookSellerAgent extends Agent {
-    // The catalogue of books for sale (maps the title of a book to its price)
+    // каталог книг агенту-продавця для продажу (звязвує назву книги з її ціною)
     private Hashtable<String, Integer> catalogue;
-    // The GUI by means of which the user can add books in the catalogue
+    // GUI яким "продавець" (юзер) може додавати книги до каталогу
     private BookSellerGui myGui;
 
-    // Put agent initializations here
+    // Ініціалізація агенту
     protected void setup() {
-        // Create the catalogue
+        // Формальне створення каталогу
         catalogue = new Hashtable<String, Integer>();
 
-        // Create and show the GUI
+        // Формальне створення та показ GUI
         myGui = new BookSellerGui(this);
 
         // Register the book-selling service in the yellow pages
@@ -39,10 +39,10 @@ public class BookSellerAgent extends Agent {
             fe.printStackTrace();
         }
 
-        // Add the behaviour serving queries from buyer agents
+        // Додавання поведінки з агенту покупців (Add the behaviour serving queries from buyer agents)
         addBehaviour(new OfferRequestsServer());
 
-        // Add the behaviour serving purchase orders from buyer agents
+        // Додавння поведінки заказів покупців (Add the behaviour serving purchase orders from buyer agents)
         addBehaviour(new PurchaseOrdersServer());
     }
 
@@ -54,14 +54,14 @@ public class BookSellerAgent extends Agent {
         } catch (FIPAException fe) {
             fe.printStackTrace();
         }
-        // Close the GUI
+        // Закриття GUI
         myGui.dispose();
-        // Printout a dismissal message
+        // Принт повідомлення про закінчення роботи агента
         System.out.println("Seller-agent "+getAID().getName()+" terminating.");
     }
 
     /**
-     This is invoked by the GUI when the user adds a new book for sale
+     Принт повідомлення додавання книги з ціною якимось продавцем
      */
     public void updateCatalogue(final String title, final int price) {
         addBehaviour(new OneShotBehaviour() {
@@ -74,28 +74,26 @@ public class BookSellerAgent extends Agent {
 
     /**
      Inner class OfferRequestsServer.
-     This is the behaviour used by Book-seller agents to serve incoming requests
-     for offer from buyer agents.
-     If the requested book is in the local catalogue the seller agent replies
-     with a PROPOSE message specifying the price. Otherwise a REFUSE message is
-     sent back.
+     Поведінка агентів-продавців до повідомлень пошуку книги агентами_покупцями
+     Якщо є книга у каталозі, то продавець відповідає повідомленням-пропозицією з ціною.
+     Інакше надситлається пловідомлення-відказ
      */
     private class OfferRequestsServer extends CyclicBehaviour {
         public void action() {
             MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.CFP);
             ACLMessage msg = myAgent.receive(mt);
             if (msg != null) {
-                // CFP Message received. Process it
+                // CFP повідомлення отримання, оброблення повідомлення
                 String title = msg.getContent();
                 ACLMessage reply = msg.createReply();
 
                 Integer price = catalogue.get(title);
                 if (price != null) {
-                    // The requested book is available for sale. Reply with the price
+                    // Книга є в каталозі, запропонувати ціну
                     reply.setPerformative(ACLMessage.PROPOSE);
                     reply.setContent(String.valueOf(price.intValue()));
                 } else {
-                    // The requested book is NOT available for sale.
+                    // Книги в каталозі немає
                     reply.setPerformative(ACLMessage.REFUSE);
                     reply.setContent("not-available");
                 }
@@ -111,7 +109,7 @@ public class BookSellerAgent extends Agent {
             MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL);
             ACLMessage msg = myAgent.receive(mt);
             if (msg != null) {
-                // ACCEPT_PROPOSAL Message received. Process it
+                // Повідомлення про прийняття пропозиції прийнято, обролення
                 String title = msg.getContent();
                 ACLMessage reply = msg.createReply();
 
